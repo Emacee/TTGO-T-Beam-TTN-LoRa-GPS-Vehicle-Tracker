@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2015 Thomas Telkamp and Matthijs Kooijman
+ * Based on the LMIC example by 2015 Thomas Telkamp and Matthijs Kooijman Copyright (c)
  *
  * This uses OTAA, where a DevEUI and
  * application key is configured, while the DevAddr and session keys are
@@ -13,10 +13,10 @@
  * the things network, to set or generate a DevAddr, NwkSKey and
  * AppSKey. Each device should have their own unique values for these
  * fields.
- * *
+ * 
  *Rev1.1 of the TTGO T-Beam uses the AXP192
  *On earlier and simpler ESP32-based TTGO boards, BUILTIN_LED has to be connected to ESP pins, 2 or 14. Or 17, as wiki said. But it’s a harsh lie :)
-Truth is: T-Beam uses auxillary power manager, hardware AXP192. Look for a second on your board, you’ll easily find one.
+  Truth is: T-Beam uses auxillary power manager, hardware AXP192. Look for a second on your board, you’ll easily find one.
     axp.setChgLEDMode(AXP20X_LED_OFF); // LED off
     axp.setChgLEDMode(AXP20X_LED_BLINK_1HZ); // 1blink/sec, low rate
     axp.setChgLEDMode(AXP20X_LED_BLINK_4HZ); // 4blink/sec, high rate
@@ -80,7 +80,7 @@ void do_send(osjob_t* j); // declaration of send function
 #ifdef DEBUG
 const unsigned int TX_INTERVAL = 45;
 #else
-const unsigned int TX_INTERVAL = 300;
+const unsigned int TX_INTERVAL = 600;
 #endif
 
 // Those variables keep their values after software restart or wakeup from sleep, not after power loss or hard reset !
@@ -89,11 +89,11 @@ RTC_NOINIT_ATTR u4_t otaaDevAddr;
 RTC_NOINIT_ATTR u1_t otaaNetwKey[16];
 RTC_NOINIT_ATTR u1_t otaaApRtKey[16];
 
-const unsigned int GPS_FIX_RETRY_DELAY = 10; // wait this many seconds when no GPS fix is received to retry
-const unsigned int SHORT_TX_INTERVAL = 20; // when driving, send packets every SHORT_TX_INTERVAL seconds
-const double MOVING_KMPH = 10; // if speed in km/h is higher than MOVING_HMPH, we assume that car is moving
+const unsigned int GPS_FIX_RETRY_DELAY = 15; // Wait this many seconds when no GPS fix is received to retry
+const unsigned int SHORT_TX_INTERVAL = 25; // When moving, send packets every SHORT_TX_INTERVAL seconds
+const double MOVING_KMPH = 10; // If speed in km/h is higher than MOVING_HMPH, we assume that car is moving
 
-// Pin mapping
+// Pin mapping for REV v1.1 TTGO T-Beam
 const lmic_pinmap lmic_pins = {
     .nss = 18,
     .rxtx = LMIC_UNUSED_PIN,
@@ -188,7 +188,7 @@ void onEvent (ev_t ev) {
             break;
         case EV_JOINING:
             Serial.println(F("EV_JOINING"));
-            axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL); // LED full on
+            axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL); // LED full on during join
             break;
         case EV_JOINED:
             Serial.println(F("EV_JOINED"));
@@ -196,7 +196,7 @@ void onEvent (ev_t ev) {
             memcpy_P(otaaNetwKey, LMIC.nwkKey, 16);
             memcpy_P(otaaApRtKey, LMIC.artKey, 16);
             sprintf(s, "got devaddr = 0x%X", LMIC.devaddr);
-            axp.setChgLEDMode(AXP20X_LED_BLINK_1HZ); // 1blink/sec, low rate
+            axp.setChgLEDMode(AXP20X_LED_BLINK_1HZ); // 1blink/sec, low rate LED blink between joing and first complete message transmission
             Serial.println(s);
             break;
         case EV_RFU1:
@@ -221,9 +221,8 @@ void onEvent (ev_t ev) {
             Serial.print(F("Next LoRa packet scheduled in "));
             Serial.print(nextPacketTime);
             Serial.println(F(" seconds!"));
-            Serial.println(F("------------------------------------------------"));
             storeFrameCounters();
-            axp.setChgLEDMode(AXP20X_LED_OFF); // LED off
+            axp.setChgLEDMode(AXP20X_LED_OFF); // LED off after (first) complete message transmission
             break;
         case EV_LOST_TSYNC:
             Serial.println(F("EV_LOST_TSYNC"));

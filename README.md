@@ -33,7 +33,7 @@ I'll try to describe whole project setup as best I can.
 Keep in mind the instructions in the file, e.g. \
 This EUI must be in little-endian format, so least-significant-byte first. \
 When copying an EUI from The Things dashboard, this means to reverse the bytes. \
-For TTN issued EUIs the last bytes should be 0xD5, 0xB3,0x70. \
+For TTN issued EUIs the last bytes should be 0xD5, 0xB3,0x70.
    
 5. Upload sketch to your board, you can program the T-Beam using the [Arduino ESP32](https://github.com/espressif/arduino-esp32) board `Heltec_WIFI_LoRa_32`
 6. In your TTN application, in section **Payload formats** select `Cayenne LPP`

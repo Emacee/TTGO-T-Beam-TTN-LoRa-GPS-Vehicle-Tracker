@@ -88,10 +88,6 @@ Any value from 2.2k to 10k should be OK.
 - [Arduino-LMIC](https://github.com/matthijskooijman/arduino-lmic)
 
 
-### Update `config.h`
-
-If you haven't already, update with your own [TTN keys](https://www.thethingsnetwork.org/docs/devices/registration.html) - **ABP authentication**
-
 ##### TTN Keys
 
 These are the keys you will need from the TTN console (marked yellow).

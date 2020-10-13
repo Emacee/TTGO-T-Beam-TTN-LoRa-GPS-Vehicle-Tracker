@@ -1,5 +1,16 @@
 # TTGO-T-Beam-TTN-LoRa-GPS-Vehicle-Tracker
-GPS based vehicle tracker running on the LoRa network of The Things Network 
+GPS based vehicle tracker running on the LoRa network of The Things Network based on OTAA
+
+## Credits
+
+- Thanks to [Tekk](https://github.com/tekk) for his [TTGO-T-Beam-Car-Tracker](https://github.com/tekk/TTGO-T-Beam-Car-Tracker) which came as an inspiration for this project
+
+- Thanks [Matthijs Kooijman](https://github.com/matthijskooijman/arduino-lmic/tree/master/examples/ttn-otaa) to for his OTAA example for The Things Network
+
+- Thanks to [DeuxVis](https://github.com/DeuxVis) for his [Lora-TTNMapper-T-Beam](https://github.com/DeuxVis/Lora-TTNMapper-T-Beam) which formed inspiration for Tekk's repository
+
+- GPS power management based on the code provided by [LilyGO](https://github.com/LilyGO/TTGO-T-Beam/blob/master/GPS-T22_v1.0-20190612/GPS-T22_v1.0-20190612.ino)
+
 # 🚘 Vehicle GPS tracker with TTGO-T-Beam
 ### ESP32 + GPS + LoRa + GSM <sup>(optional)</sup>
 
@@ -162,7 +173,3 @@ Power
 
 You are welcome to contribute to this project in any way. (Submit an issue, bug report, fork and improve...)
 Suggestions & feedback is much appreciated.
-
-## Credits
-
-- Thanks to [DeuxVis](https://github.com/DeuxVis) for his [Lora-TTNMapper-T-Beam](https://github.com/DeuxVis/Lora-TTNMapper-T-Beam) which came as an inspiration for this project

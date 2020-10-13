@@ -170,8 +170,11 @@ Power
 
 ## TODO
 
-- Add serial terminal console via WiFi AP
-	- To watch output & debug messages (Websockets?)
+- Split code with separate configuration file
+- Split code so that BME280 can be taken out when not in use
+- Update LMIC compatiblity to new MCCI LMIC library
+- Debug TTN downlink messages, there are a lot of frames down. Seems to come from the library but need to test this first
+
 
 ## Further improvement
 

@@ -153,15 +153,6 @@ Power
   CP2104-GMR
 ```
 
-### TTGO T-Beam Pin Map
-
-![TTGO Pin map](images/pinmap.png)
-
-### First prototype
-
-![Prototype Car Tracker 1](images/proto1.jpg)
-![Prototype Car Tracker 2](images/proto2.jpg)
-
 ## TODO
 
 - Add serial terminal console via WiFi AP

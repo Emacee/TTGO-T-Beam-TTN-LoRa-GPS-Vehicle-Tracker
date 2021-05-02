@@ -90,8 +90,8 @@ RTC_NOINIT_ATTR u1_t otaaNetwKey[16];
 RTC_NOINIT_ATTR u1_t otaaApRtKey[16];
 
 const unsigned int GPS_FIX_RETRY_DELAY = 15; // Wait this many seconds when no GPS fix is received to retry
-const unsigned int SHORT_TX_INTERVAL = 25; // When moving, send packets every SHORT_TX_INTERVAL seconds
-const double MOVING_KMPH = 10; // If speed in km/h is higher than MOVING_HMPH, we assume that car is moving
+const unsigned int SHORT_TX_INTERVAL = 30; // When moving, send packets every SHORT_TX_INTERVAL seconds
+const double MOVING_KMPH = 4; // If speed in km/h is higher than MOVING_HMPH, we assume that car is moving
 
 // Pin mapping for REV v1.1 TTGO T-Beam
 const lmic_pinmap lmic_pins = {
@@ -266,9 +266,9 @@ void do_send(osjob_t* j) {
       // we have all the data that we need, let's construct LPP packet for Cayenne
       lpp.reset();
       lpp.addGPS(1, lat, lon, alt);
-      lpp.addTemperature(2, tmp);
-      lpp.addRelativeHumidity(3, hum);
-      lpp.addBarometricPressure(4, pressure);
+      // lpp.addTemperature(2, tmp);
+      // lpp.addRelativeHumidity(3, hum);
+      // lpp.addBarometricPressure(4, pressure);
       lpp.addAnalogInput(5, vBat);
       lpp.addAnalogInput(6, kmph);
       lpp.addAnalogInput(7, sats);

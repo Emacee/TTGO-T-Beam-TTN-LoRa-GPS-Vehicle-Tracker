@@ -1,6 +1,10 @@
 # TTGO-T-Beam-TTN-LoRa-GPS-Vehicle-Tracker
 GPS based vehicle tracker running on the LoRa network of The Things Network based on OTAA
 
+> **New: [MotionTracker](MotionTracker/README.md)** reports every 30–120 s while moving and sends a heartbeat
+> every 5–15 minutes while parked. Between heartbeats it sleeps and wakes on motion from an external
+> accelerometer. It supports T-Beam v1.0, v1.1 and v1.2. The sketches below are the original fixed-rate versions.
+
 ## Credits
 
 - Thanks to [Tekk](https://github.com/tekk) for his [TTGO-T-Beam-Car-Tracker](https://github.com/tekk/TTGO-T-Beam-Car-Tracker) which came as an inspiration for this project

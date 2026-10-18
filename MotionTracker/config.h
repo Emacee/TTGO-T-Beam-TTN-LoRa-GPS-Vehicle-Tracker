@@ -1,6 +1,8 @@
 #ifndef MOTIONTRACKER_CONFIG_H
 #define MOTIONTRACKER_CONFIG_H
 
+#include <stdint.h>
+
 /*******************************************************************************
  * MotionTracker configuration
  *
@@ -66,6 +68,16 @@ const uint32_t HEARTBEAT_GPS_WAIT_S = 45; // max. time to wait for that fix
 #define MPU6050_MOTION_THRESHOLD  20
 // Motion seen by the accelerometer keeps the tracker in "moving" mode for this long.
 const uint32_t ACCEL_MOTION_HOLD_S = 30;
+
+// ---------------------------------------------------------------------------
+// Optional BME280 (temperature, humidity, pressure)
+// ---------------------------------------------------------------------------
+// 1 = read a BME280 on the I2C header and add it to every uplink (needs the
+//     "Adafruit BME280 Library"). 0 = leave it out completely.
+#ifndef USE_BME280
+#define USE_BME280      0
+#endif
+#define BME280_ADDRESS  0x76 // 0x77 on some boards (e.g. Adafruit)
 
 // ---------------------------------------------------------------------------
 // Board (TTGO T-Beam v1.0 / v1.1 with AXP192 and v1.2 with AXP2101)

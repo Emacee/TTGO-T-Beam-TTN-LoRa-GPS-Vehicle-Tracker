@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">MotionTracker logo: a location pin sending radio waves, with motion lines</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#134E4A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge: a filled background keeps the logo readable on light and dark pages -->
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <!-- Motion lines -->
+  <g stroke="#FFFFFF" stroke-linecap="round" fill="none">
+    <line x1="30" y1="104" x2="72" y2="104" stroke-width="10" stroke-opacity="0.9"/>
+    <line x1="44" y1="132" x2="78" y2="132" stroke-width="10" stroke-opacity="0.65"/>
+    <line x1="58" y1="160" x2="90" y2="160" stroke-width="10" stroke-opacity="0.4"/>
+  </g>
+
+  <!-- Location pin and radio waves, shifted right to leave room for the motion lines -->
+  <g transform="translate(14 0)">
+  <path d="M128 52c-30.9 0-56 24.6-56 55 0 40.6 47.2 90.4 52.9 96.3a4.3 4.3 0 0 0 6.2 0C136.8 197.4 184 147.6 184 107c0-30.4-25.1-55-56-55z"
+        fill="#FFFFFF"/>
+  <circle cx="128" cy="106" r="21" fill="#0F766E"/>
+  <circle cx="128" cy="106" r="8" fill="#FBBF24"/>
+
+  <!-- Radio waves (LoRa uplink) -->
+  <g stroke="#FBBF24" stroke-linecap="round" fill="none" stroke-width="10">
+    <path d="M178 58a44 44 0 0 1 20 26"/>
+    <path d="M190 34a72 72 0 0 1 32 42"/>
+  </g>
+  </g>
+</svg>

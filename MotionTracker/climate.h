@@ -1,7 +1,7 @@
 #ifndef MOTIONTRACKER_CLIMATE_H
 #define MOTIONTRACKER_CLIMATE_H
 
-#include <CayenneLPP.h>
+#include "lpp.h"
 
 // Optional BME280 temperature / humidity / pressure sensor.
 // Enabled with USE_BME280 in config.h. When disabled, these functions do
@@ -9,7 +9,7 @@
 namespace climate
 {
     bool begin();                 // false when disabled or no sensor found
-    void addToPayload(CayenneLPP& lpp);
+    void addToPayload(LppEncoder& lpp);
 }
 
 #endif // MOTIONTRACKER_CLIMATE_H

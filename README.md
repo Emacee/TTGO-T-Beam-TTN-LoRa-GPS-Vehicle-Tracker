@@ -102,11 +102,11 @@ Things to know about `WAKE_ON_VBUS`:
 ### Optional BME280
 
 The BME280 reports the temperature, humidity and air pressure inside the vehicle. Its code is a separate
-module (`MotionTracker/climate.cpp`) that is **off by default**. With it off, the firmware doesn't use or
-need the BME280 library, and you can leave the sensor out entirely.
+module (`MotionTracker/climate.cpp`) that is **off by default**. With it off, the BME280 code is left out
+of the firmware, and you can leave the sensor out entirely.
 
-* **Turn it on:** set `#define USE_BME280 1` in `MotionTracker/config.h` and install the
-  **Adafruit BME280 Library** in the Arduino IDE (accept its dependencies).
+* **Turn it on:** set `#define USE_BME280 1` in `MotionTracker/config.h`. The Adafruit BME280 library it
+  uses is bundled with the sketch, so there's nothing to install.
 * **Address:** most cheap boards use `0x76`; Adafruit boards use `0x77`. Set it with `BME280_ADDRESS`.
 * **BME280, not BMP280:** the two look almost the same, but the BMP280 has no humidity sensor and isn't
   supported. The chip on a BME280 is square; on a BMP280 it is rectangular. With a BMP280 (or no sensor), the
@@ -114,8 +114,8 @@ need the BME280 library, and you can leave the sensor out entirely.
 * **Power:** the sensor runs in forced mode. It draws about 0.1 µA between readings, so it can stay powered
   in deep sleep. One reading is taken for every uplink.
 * **Payload:** temperature, humidity and pressure go on channels 2, 3 and 4.
-* The old BME280-I2C-ESP32 library from the original sketches isn't needed. MotionTracker uses the standard
-  Adafruit library.
+* The old BME280-I2C-ESP32 library from the original sketches isn't needed. MotionTracker uses its own
+  bundled copy of the standard Adafruit library.
 
 ![BME280 module](images/bmp280.jpg)
 
@@ -171,26 +171,11 @@ The firmware detects both. You only need to know this for the USB driver.
    `https://espressif.github.io/arduino-esp32/package_esp32_index.json`.
 3. **Tools → Board → Boards Manager**, search for **esp32** and install **esp32 by Espressif Systems**.
    Versions 2.0.17 and 3.3.x are tested.
-4. **Tools → Manage Libraries**, install:
-   * **MCCI LoRaWAN LMIC library** (by IBM, Matthijs Kooijman, Terry Moore, ...)
-   * **TinyGPSPlus** (by Mikal Hart)
-   * **CayenneLPP** (by Electronic Cats). Click **Install all** to add ArduinoJson as well.
-   * **XPowersLib** (by Lewis He)
-   * **Adafruit BME280 Library**, only if you use the BME280. Click **Install all**.
-5. **Set the LoRaWAN region.** The LMIC library has its own settings file and defaults to the US (915 MHz).
-   Open it in a text editor:
-   * Windows: `Documents\Arduino\libraries\MCCI_LoRaWAN_LMIC_library\project_config\lmic_project_config.h`
-   * macOS: `~/Documents/Arduino/libraries/MCCI_LoRaWAN_LMIC_library/project_config/lmic_project_config.h`
-   * Linux: `~/Arduino/libraries/MCCI_LoRaWAN_LMIC_library/project_config/lmic_project_config.h`
 
-   Change the first lines to:
-   ```c
-   #define CFG_eu868 1
-   //#define CFG_us915 1
-   ```
-   Updating the library overwrites this file, so repeat this step after every LMIC update. If you forget,
-   the build stops with `The MCCI LMIC library is not set to EU868`. Outside Europe, pick your region
-   here and set `REQUIRE_EU868` to 0 in `config.h`.
+You don't need to install any libraries. Everything the firmware uses is bundled in
+`MotionTracker/src/`. The LoRa library there is already set to the European band (EU868). Libraries you
+installed earlier with the Library Manager are ignored by this sketch, so you can keep or remove them.
+For another region, see [Changing the LoRaWAN region](#changing-the-lorawan-region).
 
 ### 4. Configure, build and flash
 
@@ -249,7 +234,23 @@ For desk testing, uncomment `#define DEBUG` in `config.h` to get shorter interva
 * `USE_ACCEL`: 1 to use an accelerometer if one is connected, 0 for GPS-only motion detection.
 * `WAKE_ON_VBUS`: 1 to wake up and stay in MOVING mode while USB power is present (ignition-switched USB), 0 to ignore USB power.
 * `USE_BME280`: 1 to include the optional BME280 module, 0 to leave it out.
-* `REQUIRE_EU868`: stops the build if the LMIC library isn't set to EU868. Set it to 0 for other regions.
+* `REQUIRE_EU868`: stops the build if the bundled LMIC library isn't set to EU868. Set it to 0 for other regions.
+
+### Changing the LoRaWAN region
+
+The region is set in the bundled LMIC library, not in `config.h`. Open
+`MotionTracker/src/MCCI_LMIC/project_config/lmic_project_config.h` (in a text editor; the Arduino IDE doesn't
+show it as a tab), comment out `#define CFG_eu868 1` and enable your region, for example
+`#define CFG_us915 1`. Then set `REQUIRE_EU868` to 0 in `config.h`, and pick the matching frequency plan in
+the TTN console.
+
+### Bundled libraries
+
+`MotionTracker/src/` contains the MCCI LMIC, TinyGPSPlus, XPowersLib and Adafruit BME280 libraries (with the
+Adafruit Unified Sensor and BusIO libraries the BME280 one needs), each with its licence. The Cayenne LPP
+payload is built by `MotionTracker/lpp.h`, so the CayenneLPP and ArduinoJson libraries aren't needed.
+[`MotionTracker/src/README.md`](MotionTracker/src/README.md) lists the versions and licences and explains
+how to update them.
 * `#define DEBUG`: short intervals for testing on the desk.
 
 ## Payload (Cayenne LPP, port 1)

@@ -4,7 +4,7 @@
 #if USE_BME280
 
 #include <Wire.h>
-#include <Adafruit_BME280.h>
+#include "src/Adafruit_BME280/Adafruit_BME280.h"
 
 static Adafruit_BME280 bme;
 static bool found = false;
@@ -23,7 +23,7 @@ bool climate::begin()
   return true;
 }
 
-void climate::addToPayload(CayenneLPP& lpp)
+void climate::addToPayload(LppEncoder& lpp)
 {
   if (!found || !bme.takeForcedMeasurement()) return;
   float t = bme.readTemperature();
@@ -38,6 +38,6 @@ void climate::addToPayload(CayenneLPP& lpp)
 #else
 
 bool climate::begin() { return false; }
-void climate::addToPayload(CayenneLPP&) {}
+void climate::addToPayload(LppEncoder&) {}
 
 #endif

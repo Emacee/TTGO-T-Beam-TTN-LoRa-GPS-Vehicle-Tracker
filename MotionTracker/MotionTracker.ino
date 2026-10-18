@@ -25,16 +25,17 @@
  *   ch 7 satellites            ch 8 state: 0 parked (heartbeat), 1 moving, 2 stopped
  *   ch 2/3/4 temperature, humidity, pressure (only with USE_BME280)
  *
- * Requires the MCCI LoRaWAN LMIC library with the right region selected
- * (see README.md in the repository root), TinyGPSPlus, CayenneLPP and XPowersLib.
+ * All libraries are bundled in src/ (MCCI LMIC preset to EU868, TinyGPSPlus,
+ * XPowersLib, Adafruit BME280), so only the ESP32 board package is needed.
+ * See README.md in the repository root.
  *******************************************************************************/
 
-#include <lmic.h>
-#include <hal/hal.h>
+// Libraries are bundled in src/ (see src/README.md), so nothing needs to be installed.
+#include "src/MCCI_LMIC/src/lmic.h"
+#include "src/MCCI_LMIC/src/hal/hal.h"
 #include <SPI.h>
 #include <Wire.h>
 #include <WiFi.h>
-#include <CayenneLPP.h>
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
 #include <sys/time.h>
@@ -42,17 +43,18 @@
 #include "config.h"
 
 #if REQUIRE_EU868 && !defined(CFG_eu868)
-#error "The MCCI LMIC library is not set to EU868. Edit project_config/lmic_project_config.h in the library folder (see README), or set REQUIRE_EU868 to 0 in config.h."
+#error "The bundled LMIC library is not set to EU868. Check src/MCCI_LMIC/project_config/lmic_project_config.h, or set REQUIRE_EU868 to 0 in config.h."
 #endif
 
 #include "accel.h"
 #include "climate.h"
+#include "lpp.h"
 #include "gps.h"
 #include "power.h"
 
 enum TrackerState : uint8_t { STATE_PARKED = 0, STATE_MOVING = 1, STATE_STOPPED = 2 };
 
-CayenneLPP lpp(51);
+LppEncoder lpp(51);
 gps gps;
 Accel accel;
 

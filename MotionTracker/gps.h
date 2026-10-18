@@ -1,7 +1,7 @@
 #ifndef MOTIONTRACKER_GPS_H
 #define MOTIONTRACKER_GPS_H
 
-#include <TinyGPS++.h>
+#include "src/TinyGPSPlus/src/TinyGPS++.h"
 
 struct GpsFix
 {

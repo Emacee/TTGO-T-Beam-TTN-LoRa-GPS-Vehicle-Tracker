@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <XPowersLib.h> // no XPOWERS_CHIP_* define: pulls in both the AXP192 and AXP2101 drivers
+#include "src/XPowersLib/src/XPowersLib.h" // no XPOWERS_CHIP_* define: pulls in both the AXP192 and AXP2101 drivers
 #include "config.h"
 #include "power.h"
 

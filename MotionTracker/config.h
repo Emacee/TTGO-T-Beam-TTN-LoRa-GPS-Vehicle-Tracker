@@ -22,9 +22,9 @@
 #define LORAWAN_APPKEY  { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 
-// The LoRaWAN region is set in the MCCI LMIC library, not here (see README).
-// With this set to 1 the build stops with an error if the library is not set to EU868.
-// Set it to 0 if you use another region.
+// The LoRaWAN region is set in src/MCCI_LMIC/project_config/lmic_project_config.h
+// (EU868 as shipped). With this set to 1 the build stops with an error if that
+// file is not set to EU868. Set it to 0 if you use another region.
 #define REQUIRE_EU868       1
 
 #define LORAWAN_PORT        1       // FPort used for the Cayenne LPP uplinks
@@ -82,8 +82,8 @@ const uint32_t ACCEL_MOTION_HOLD_S = 30;
 // ---------------------------------------------------------------------------
 // Optional BME280 (temperature, humidity, pressure)
 // ---------------------------------------------------------------------------
-// 1 = read a BME280 on the I2C header and add it to every uplink (needs the
-//     "Adafruit BME280 Library"). 0 = leave it out completely.
+// 1 = read a BME280 on the I2C header and add it to every uplink.
+// 0 = leave it out completely.
 #ifndef USE_BME280
 #define USE_BME280      0
 #endif

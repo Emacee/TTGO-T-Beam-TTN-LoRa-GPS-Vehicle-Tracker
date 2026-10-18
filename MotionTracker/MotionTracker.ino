@@ -20,6 +20,7 @@
  * Uplink: Cayenne LPP on port LORAWAN_PORT
  *   ch 1 GPS (lat, lon, alt)   ch 5 battery voltage   ch 6 speed km/h
  *   ch 7 satellites            ch 8 state: 0 parked (heartbeat), 1 moving, 2 stopped
+ *   ch 2/3/4 temperature, humidity, pressure (only with USE_BME280)
  *
  * Requires the MCCI LoRaWAN LMIC library with the right region selected
  * (see README), TinyGPSPlus, CayenneLPP and XPowersLib.
@@ -37,6 +38,7 @@
 
 #include "config.h"
 #include "accel.h"
+#include "climate.h"
 #include "gps.h"
 #include "power.h"
 
@@ -174,6 +176,7 @@ void queueUplink(TrackerState reportState)
   lpp.addAnalogInput(6, haveFix ? fix.kmph : 0);
   lpp.addAnalogInput(7, haveFix ? fix.sats : 0);
   lpp.addDigitalInput(8, reportState);
+  climate::addToPayload(lpp);
 
   if (LMIC_setTxData2(LORAWAN_PORT, lpp.getBuffer(), lpp.getSize(), 0) == 0) {
     uplinkQueued = true;
@@ -380,6 +383,7 @@ void setup()
   bool fromDeepSleep = esp_reset_reason() == ESP_RST_DEEPSLEEP;
 
   if (!accel.begin(!fromDeepSleep)) Serial.println(F("No accelerometer found: motion wake-up disabled, using GPS only"));
+  if (USE_BME280 && !climate::begin()) Serial.println(F("USE_BME280 is on but no BME280 found"));
   Serial.printf("\nMotionTracker boot #%u, PMU %s, accel %s, wake cause %d\n",
                 rtcBootCount, power::pmuName(), accel.name(), cause);
 

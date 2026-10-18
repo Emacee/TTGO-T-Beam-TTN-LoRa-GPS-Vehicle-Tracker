@@ -10,6 +10,7 @@
 //   3V3 header        DCDC1                DCDC1 (also ESP32, never switched off)
 static XPowersLibInterface* pmu = nullptr;
 static uint8_t railLora, railGps;
+static bool irqButton = false;
 
 bool power::begin()
 {
@@ -38,7 +39,30 @@ bool power::begin()
   pmu->enablePowerOutput(XPOWERS_DCDC1);
   pmu->enableBattVoltageMeasure();
   pmu->enableBattDetection();
+
+  // Remember why the PMU raised its interrupt (it may have woken us), then only
+  // keep the interrupts we use, so the IRQ line is idle while we sleep.
+  pmu->getIrqStatus();
+  irqButton = pmu->isPekeyShortPressIrq();
+  pmu->disableInterrupt(XPOWERS_ALL_INT);
+#if WAKE_ON_VBUS
+  pmu->enableInterrupt(XPOWERS_USB_INSERT_INT | XPOWERS_PWR_BTN_CLICK_INT);
+#endif
+  pmu->clearIrqStatus();
+  pinMode(PMU_IRQ_PIN, INPUT); // GPIO 35 has no internal pull-up; relies on the one on the board
   return true;
+}
+
+bool power::vbusPresent()
+{
+  return pmu && pmu->isVbusIn();
+}
+
+bool power::wokeByButton() { return irqButton; }
+
+bool power::irqPending()
+{
+  return digitalRead(PMU_IRQ_PIN) == LOW;
 }
 
 const char* power::pmuName()
@@ -73,4 +97,5 @@ void power::prepareSleep()
   led(false);
   pmu->disablePowerOutput(railGps);
   pmu->disablePowerOutput(railLora);
+  pmu->clearIrqStatus();
 }

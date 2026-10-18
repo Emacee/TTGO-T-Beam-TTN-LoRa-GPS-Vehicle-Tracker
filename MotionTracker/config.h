@@ -22,6 +22,11 @@
 #define LORAWAN_APPKEY  { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 
+// The LoRaWAN region is set in the MCCI LMIC library, not here (see README).
+// With this set to 1 the build stops with an error if the library is not set to EU868.
+// Set it to 0 if you use another region.
+#define REQUIRE_EU868       1
+
 #define LORAWAN_PORT        1       // FPort used for the Cayenne LPP uplinks
 #define LORAWAN_DATARATE    DR_SF7  // fixed data rate; ADR is disabled because the device moves
 #define LORAWAN_TXPOWER     14      // dBm
@@ -55,10 +60,15 @@ const uint32_t JOIN_GIVEUP_S    = 300;   // parked but not joined/not done after
 const uint32_t HEARTBEAT_GPS_WAIT_S = 45; // max. time to wait for that fix
 
 // ---------------------------------------------------------------------------
-// Accelerometer (the T-Beam has none on board - wire one to the I2C header)
+// Accelerometer (optional; the T-Beam has none on board - wire one to the I2C header)
 // ---------------------------------------------------------------------------
+// 1 = use an accelerometer if one is connected (auto-detected).
+// 0 = no accelerometer: motion is detected with GPS (at every heartbeat) and,
+//     with WAKE_ON_VBUS, by USB power coming on.
+#ifndef USE_ACCEL
+#define USE_ACCEL       1
+#endif
 // Supported: LIS3DH (recommended, ~6 uA) or MPU6050 / GY-521 (~20-70 uA).
-// The driver auto-detects which one is connected.
 //   SDA -> 21, SCL -> 22, VCC -> 3V3, GND -> GND, INT/INT1 -> ACCEL_INT_PIN
 #define ACCEL_INT_PIN   GPIO_NUM_13 // must be an RTC GPIO: 0,2,4,12-15,25-27,32-39
 // Wake/motion threshold. Units differ per sensor:
@@ -88,5 +98,20 @@ const uint32_t ACCEL_MOTION_HOLD_S = 30;
 #define GPS_TX_PIN      12  // ESP32 TX -> GPS RX
 #define USER_BUTTON_PIN GPIO_NUM_38 // middle button; wakes the tracker and forces an uplink
 #define WAKE_ON_BUTTON  1
+#define PMU_IRQ_PIN     GPIO_NUM_35 // interrupt line of the AXP192 / AXP2101 power chip
+
+// ---------------------------------------------------------------------------
+// Wake up on USB power (ignition)
+// ---------------------------------------------------------------------------
+// 1 = USB power on the T-Beam counts as "vehicle in use": it wakes the tracker
+//     from deep sleep straight away and keeps it in MOVING mode while present.
+//     Use this when the T-Beam is powered from a USB port that switches on with
+//     the ignition. With a permanent USB supply the tracker would never sleep.
+//     The short press of the PWR button then wakes the tracker instead of the
+//     middle button (both share the same wake-up channel).
+// 0 = USB power is ignored.
+#ifndef WAKE_ON_VBUS
+#define WAKE_ON_VBUS    0
+#endif
 
 #endif // MOTIONTRACKER_CONFIG_H

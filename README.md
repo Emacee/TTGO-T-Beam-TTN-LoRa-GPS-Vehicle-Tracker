@@ -19,7 +19,9 @@ The tracker wakes from deep sleep when:
 
 * the **accelerometer detects motion**: it powers up the GPS and goes to MOVING,
 * the **heartbeat timer** runs out: it sends the last known position and goes back to sleep in a few seconds,
-* the **middle user button** (GPIO 38) is pressed: it sends an uplink straight away.
+* the **middle user button** (GPIO 38) is pressed: it sends an uplink straight away (with `WAKE_ON_VBUS` the
+  short press of the PWR button does this instead),
+* **USB power comes on**, for example when the ignition switches on a USB port (optional, `WAKE_ON_VBUS`).
 
 A short bump, such as a door being closed, wakes the tracker but doesn't make it send anything. The first
 MOVING uplink only goes out when GPS speed confirms the movement, or when the accelerometer still reports
@@ -49,7 +51,7 @@ The original `TTGO-T-Beam-TTN-LoRa-GPS-Vehicle-Tracker.ino` has these problems, 
 |------|--------|-------|
 | **TTGO T-Beam** v1.0, v1.1 (AXP192) or v1.2 (AXP2101) | Yes | Detected automatically |
 | **LoRa antenna** and GPS antenna | Yes | Never transmit without the LoRa antenna |
-| **Accelerometer**: LIS3DH or MPU-6050 | Strongly recommended | Wakes the tracker on motion; the T-Beam has none on board |
+| **Accelerometer**: LIS3DH or MPU-6050 | Optional, recommended | Wakes the tracker on motion; the T-Beam has none on board. See [Without an accelerometer](#without-an-accelerometer) |
 | **BME280** temperature / humidity / pressure | Optional | Off by default, see [Optional BME280](#optional-bme280) |
 | 18650 Li-ion cell | For use without USB | Goes in the holder on the back |
 
@@ -64,8 +66,38 @@ The firmware detects which of these two is connected:
 | **LIS3DH** (recommended) | ~6 µA | Adafruit 2809, or generic LIS3DH boards |
 | **MPU-6050 / GY-521** | ~20–70 µA | Cheap and common. It uses more power in sleep. |
 
-If no accelerometer is found, the tracker still works: it wakes on the heartbeat timer, takes a GPS fix and
-switches to MOVING if it has moved more than 100 m. Motion is then only noticed at the next heartbeat.
+Wire its interrupt pin to GPIO 13 (see [Wiring](#wiring)). If you don't fit one, set `USE_ACCEL 0` in
+`config.h`, or leave it at 1: a missing sensor is detected and the tracker falls back to GPS.
+
+### Without an accelerometer
+
+The tracker works without an accelerometer, but it needs another way to notice that the vehicle starts moving:
+
+| | With accelerometer | GPS only | GPS + USB power wake-up |
+|---|---|---|---|
+| Notices the vehicle starts moving | Immediately | At the next heartbeat (up to `HEARTBEAT_S`) | Immediately when the ignition comes on |
+| Notices towing or theft without ignition | Immediately | At the next heartbeat | At the next heartbeat |
+| Heartbeat while parked | A few seconds, GPS off | GPS on, up to `HEARTBEAT_GPS_WAIT_S` (45 s) | Same as GPS only |
+| Extra hardware | Sensor + 5 wires | None | None, but needs a USB port that switches with the ignition |
+
+**GPS only** (`USE_ACCEL 0`): at every heartbeat the tracker powers the GPS and switches to MOVING if it is
+more than 100 m from the last position or GPS shows speed.
+
+**USB power wake-up** (`WAKE_ON_VBUS 1`): power the T-Beam from a USB port that switches on with the
+ignition, and keep the 18650 cell in the holder for when the ignition is off. The power chip on the T-Beam
+then wakes the ESP32 (through GPIO 35) as soon as USB power appears. While USB power is present the
+tracker stays in MOVING mode; after the ignition goes off it waits `STOP_TIMEOUT_S`, sends "stopped" and
+goes to sleep. This also works together with an accelerometer.
+
+Things to know about `WAKE_ON_VBUS`:
+
+* With a USB supply that is **always on**, the tracker never sleeps. Only enable it on a switched port.
+* For the same reason, test sleep on battery: unplug the USB cable after flashing.
+* The middle button can no longer wake the tracker. A **short press of the PWR button** does that instead
+  (the ESP32 has only one wake-up channel left for both).
+* The power chip's interrupt line (GPIO 35) needs a pull-up resistor. The T-Beam should have one on board,
+  but this hasn't been checked on real hardware yet. If the tracker prints `PMU interrupt line stuck low`
+  before sleeping, the line stays low on your board and USB wake-up is switched off for that sleep.
 
 ### Optional BME280
 
@@ -73,8 +105,8 @@ The BME280 reports the temperature, humidity and air pressure inside the vehicle
 module (`MotionTracker/climate.cpp`) that is **off by default**. With it off, the firmware doesn't use or
 need the BME280 library, and you can leave the sensor out entirely.
 
-* **Turn it on:** set `#define USE_BME280 1` in `MotionTracker/config.h`, or build the
-  `ttgo-t-beam-bme280` PlatformIO environment. In the Arduino IDE, also install the **Adafruit BME280 Library**.
+* **Turn it on:** set `#define USE_BME280 1` in `MotionTracker/config.h` and install the
+  **Adafruit BME280 Library** in the Arduino IDE (accept its dependencies).
 * **Address:** most cheap boards use `0x76`; Adafruit boards use `0x77`. Set it with `BME280_ADDRESS`.
 * **BME280, not BMP280:** the two look almost the same, but the BMP280 has no humidity sensor and isn't
   supported. The chip on a BME280 is square; on a BMP280 it is rectangular. With a BMP280 (or no sensor), the
@@ -132,49 +164,59 @@ The firmware detects both. You only need to know this for the USB driver.
 5. **Payload formatters → Uplink → Formatter type: CayenneLPP → Save.** TTN then shows the decoded values
    (location, battery, speed, state) for every message.
 
-### 3. Set up the build tools
+### 3. Set up the Arduino IDE
 
-**Option A: PlatformIO (easiest)**
-
-1. Install [VS Code](https://code.visualstudio.com/) and the **PlatformIO IDE** extension.
-2. **File → Open Folder** and select this repository (the folder that contains `platformio.ini`).
-3. If you're not in Europe, change `CFG_eu868` in `platformio.ini` to your region (`CFG_us915`,
-   `CFG_au915`, ...).
-
-PlatformIO downloads the ESP32 toolchain and all libraries by itself.
-
-**Option B: Arduino IDE 2**
-
-1. **File → Preferences → Additional boards manager URLs**, add
+1. Install [Arduino IDE 2](https://www.arduino.cc/en/software).
+2. **File → Preferences → Additional boards manager URLs**, add
    `https://espressif.github.io/arduino-esp32/package_esp32_index.json`.
-2. **Tools → Board → Boards Manager**, install **esp32 by Espressif Systems**.
-3. **Tools → Manage Libraries**, install **MCCI LoRaWAN LMIC library**, **TinyGPSPlus**, **CayenneLPP**
-   (accept ArduinoJson as a dependency) and **XPowersLib**. Add **Adafruit BME280 Library** only if you use
-   the BME280.
-4. Select your region: open `Documents/Arduino/libraries/MCCI_LoRaWAN_LMIC_library/project_config/lmic_project_config.h`,
-   comment out `#define CFG_us915 1` and uncomment `#define CFG_eu868 1` (or your region).
-5. Open `MotionTracker/MotionTracker.ino`.
-6. **Tools → Board → esp32 → T-Beam**.
+3. **Tools → Board → Boards Manager**, search for **esp32** and install **esp32 by Espressif Systems**.
+   Versions 2.0.17 and 3.3.x are tested.
+4. **Tools → Manage Libraries**, install:
+   * **MCCI LoRaWAN LMIC library** (by IBM, Matthijs Kooijman, Terry Moore, ...)
+   * **TinyGPSPlus** (by Mikal Hart)
+   * **CayenneLPP** (by Electronic Cats). Click **Install all** to add ArduinoJson as well.
+   * **XPowersLib** (by Lewis He)
+   * **Adafruit BME280 Library**, only if you use the BME280. Click **Install all**.
+5. **Set the LoRaWAN region.** The LMIC library has its own settings file and defaults to the US (915 MHz).
+   Open it in a text editor:
+   * Windows: `Documents\Arduino\libraries\MCCI_LoRaWAN_LMIC_library\project_config\lmic_project_config.h`
+   * macOS: `~/Documents/Arduino/libraries/MCCI_LoRaWAN_LMIC_library/project_config/lmic_project_config.h`
+   * Linux: `~/Arduino/libraries/MCCI_LoRaWAN_LMIC_library/project_config/lmic_project_config.h`
 
-### 4. Connect and flash
+   Change the first lines to:
+   ```c
+   #define CFG_eu868 1
+   //#define CFG_us915 1
+   ```
+   Updating the library overwrites this file, so repeat this step after every LMIC update. If you forget,
+   the build stops with `The MCCI LMIC library is not set to EU868`. Outside Europe, pick your region
+   here and set `REQUIRE_EU868` to 0 in `config.h`.
 
-1. Install the USB driver if your computer doesn't see a new serial port: **CP210x** (Silicon Labs) for
+### 4. Configure, build and flash
+
+1. Download this repository (**Code → Download ZIP** on GitHub) and unzip it.
+2. In the Arduino IDE, **File → Open** `MotionTracker/MotionTracker.ino`. All the other files open as tabs.
+3. In the `config.h` tab:
+   * paste your TTN keys (step 2),
+   * set `USE_ACCEL`, `WAKE_ON_VBUS` and `USE_BME280` for your hardware (see [Configuration](#configuration-configh)).
+4. **Tools → Board → esp32 → T-Beam.** The other Tools settings can stay at their defaults.
+5. Install the USB driver if your computer doesn't see a new serial port: **CP210x** (Silicon Labs) for
    v1.0/v1.1, **CH9102/CH343** (WCH) for v1.2. Recent macOS and Linux usually need nothing.
-2. Connect the T-Beam with a USB **data** cable (not a charge-only cable) and switch it on with the power button
+6. Connect the T-Beam with a USB **data** cable (not a charge-only cable). Switch it on with the PWR button
    if needed.
-3. Upload:
-   * PlatformIO: click **Upload** in the status bar, or run `pio run -t upload` (use
-     `pio run -e ttgo-t-beam-bme280 -t upload` for the BME280 version).
-   * Arduino IDE: **Tools → Port** → the new serial port, then **Upload**.
+7. **Tools → Port** → the new serial port (`COMx` on Windows, `/dev/cu.usbserial-...` or `/dev/cu.wchusbserial...`
+   on macOS, `/dev/ttyUSB0` or `/dev/ttyACM0` on Linux).
+8. Click **Upload** (→). The first build takes a few minutes.
 
    If the upload hangs at `Connecting...`, hold the **BOOT** button (GPIO 0, on the side) until the upload starts.
 
+The `platformio.ini` in the repository is for PlatformIO users; the Arduino IDE ignores it.
+
 ### 5. Check that it works
 
-1. Open the serial monitor at **115200 baud** (`pio device monitor`, or **Tools → Serial Monitor**). After a
-   reset you should see:
+1. Open **Tools → Serial Monitor** and set it to **115200 baud**. Press the RST button. You should see:
    ```
-   MotionTracker boot #1, PMU AXP192, accel LIS3DH, wake cause 0
+   MotionTracker boot #1, PMU AXP192, accel LIS3DH, USB power yes, woken by power-up
    State -> MOVING
    EV_JOINING
    EV_JOINED, devaddr=0x260B....
@@ -185,7 +227,12 @@ PlatformIO downloads the ESP32 toolchain and all libraries by itself.
 3. The first GPS fix can take a few minutes outdoors. Indoors it may not come at all; the tracker then
    sends without position after `GPS_FIX_WAIT_S`.
 4. Leave it still for `STOP_TIMEOUT_S` (3 minutes). It sends a "stopped" message (state 2) and prints
-   `Deep sleep for up to 600 s`. Shake it and it wakes up straight away.
+   `Deep sleep for up to 600 s`. Shake it and it wakes up straight away (`woken by motion`).
+   * With `WAKE_ON_VBUS 1`, unplug USB first, otherwise it doesn't sleep. Plug USB back in to wake it
+     (`woken by USB power`).
+   * Without an accelerometer, it only wakes at the heartbeat (`woken by heartbeat`).
+
+The serial monitor disconnects while the tracker sleeps; that's normal.
 
 For desk testing, uncomment `#define DEBUG` in `config.h` to get shorter intervals.
 
@@ -199,7 +246,10 @@ For desk testing, uncomment `#define DEBUG` in `config.h` to get shorter interva
   passing trucks wake the tracker.
 * `HEARTBEAT_REFRESH_GPS`: set to 1 to take a new fix on every heartbeat instead of sending the cached
   position.
+* `USE_ACCEL`: 1 to use an accelerometer if one is connected, 0 for GPS-only motion detection.
+* `WAKE_ON_VBUS`: 1 to wake up and stay in MOVING mode while USB power is present (ignition-switched USB), 0 to ignore USB power.
 * `USE_BME280`: 1 to include the optional BME280 module, 0 to leave it out.
+* `REQUIRE_EU868`: stops the build if the LMIC library isn't set to EU868. Set it to 0 for other regions.
 * `#define DEBUG`: short intervals for testing on the desk.
 
 ## Payload (Cayenne LPP, port 1)

@@ -13,6 +13,10 @@ namespace power
     float batteryVoltage();       // volts, 0 when unknown
     void led(bool on);            // charge LED (AXP192 only; no-op on AXP2101)
     void prepareSleep();          // LoRa + GPS off; header 3V3 (accelerometer) stays on
+
+    bool vbusPresent();           // USB power connected
+    bool wokeByButton();          // the PMU interrupt at boot was a short press of PWR
+    bool irqPending();            // PMU interrupt line is active (low)
 }
 
 #endif // MOTIONTRACKER_POWER_H

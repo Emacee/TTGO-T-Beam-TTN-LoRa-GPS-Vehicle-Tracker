@@ -13,6 +13,9 @@
  *             known position, or immediately when the accelerometer detects
  *             motion (or the user button is pressed).
  *
+ * Optional extras (config.h): no accelerometer (USE_ACCEL 0, GPS-only motion
+ * detection), wake-up when USB power comes on (WAKE_ON_VBUS), BME280 (USE_BME280).
+ *
  * The LoRaWAN session (keys, frame counters, channels, duty-cycle state) is
  * kept in RTC memory across deep sleep, so the tracker joins only once after
  * power-up instead of on every wake.
@@ -37,6 +40,11 @@
 #include <sys/time.h>
 
 #include "config.h"
+
+#if REQUIRE_EU868 && !defined(CFG_eu868)
+#error "The MCCI LMIC library is not set to EU868. Edit project_config/lmic_project_config.h in the library folder (see README), or set REQUIRE_EU868 to 0 in config.h."
+#endif
+
 #include "accel.h"
 #include "climate.h"
 #include "gps.h"
@@ -121,7 +129,7 @@ void saveSession()
   rtcOsTimeAtSleep = os_getTime();
   rtcSleepStartUs = rtcNowUs();
   rtcSessionValid = true;
-  Serial.printf("Session saved, FCntUp=%u\n", LMIC.seqnoUp);
+  Serial.printf("Session saved, FCntUp=%lu\n", (unsigned long)LMIC.seqnoUp);
 }
 
 void restoreSession()
@@ -142,7 +150,7 @@ void restoreSession()
 #endif
   LMIC.globalDutyAvail -= shift;
 
-  Serial.printf("Session restored after %lld s asleep, FCntUp=%u\n", sleptUs / 1000000LL, LMIC.seqnoUp);
+  Serial.printf("Session restored after %lld s asleep, FCntUp=%lu\n", sleptUs / 1000000LL, (unsigned long)LMIC.seqnoUp);
 }
 
 bool lmicIdle()
@@ -224,19 +232,22 @@ void evaluate()
     accelSeen = true;
   }
   bool accelMoving = accelSeen && (now - lastAccelMs) < ACCEL_MOTION_HOLD_S * 1000UL;
+  // Ignition on (USB power present) counts like motion from the accelerometer.
+  bool ignitionOn = WAKE_ON_VBUS && power::vbusPresent();
+  bool activity = accelMoving || ignitionOn;
 
   haveFix = gpsPowered && gps.hasFix();
   if (haveFix) fix = gps.read();
   bool gpsMoving = haveFix && fix.kmph > MOVING_KMPH;
 
-  if (accelMoving || gpsMoving) lastMotionMs = now;
+  if (activity || gpsMoving) lastMotionMs = now;
 
   switch (state) {
     case STATE_PARKED: {
       // Heartbeat wake. Without an accelerometer the GPS has to tell us whether we moved.
       bool movedWithoutAccel = !accel.present() && haveFix && rtcHaveFix &&
                                (gpsMoving || gps.distanceTo(rtcLat, rtcLon) > 100);
-      if (accelMoving || movedWithoutAccel) {
+      if (activity || movedWithoutAccel) {
         enterState(STATE_MOVING);
         break;
       }
@@ -260,9 +271,9 @@ void evaluate()
 
       if (!reportedMoving && !forceReport) {
         // First report after a wake: wait until the movement is confirmed, either by GPS speed
-        // or by the accelerometer still reporting motion once the fix wait is over.
+        // or by ongoing activity (accelerometer motion, ignition on) once the fix wait is over.
         bool fixWaitOver = (now - stateSinceMs) > GPS_FIX_WAIT_S * 1000UL;
-        if (gpsMoving || (fixWaitOver && accelMoving)) queueUplink(STATE_MOVING);
+        if (gpsMoving || (fixWaitOver && activity)) queueUplink(STATE_MOVING);
       } else if (forceReport) {
         if (haveFix || (now - stateSinceMs) > GPS_FIX_WAIT_S * 1000UL) {
           forceReport = false;
@@ -275,7 +286,7 @@ void evaluate()
     }
 
     case STATE_STOPPED:
-      if (accelMoving || gpsMoving) {
+      if (activity || gpsMoving) {
         enterState(STATE_MOVING);
         break;
       }
@@ -317,17 +328,28 @@ void goToSleep()
 
   power::prepareSleep();
 
+  // Wake-up sources. The ESP32 has two pin wake-up channels:
+  //   ext1 (any pin high): accelerometer interrupt
+  //   ext0 (one pin, low): PMU interrupt (USB power / PWR button) or the middle button
   if (accel.present()) {
     rtc_gpio_pullup_dis(ACCEL_INT_PIN);
     rtc_gpio_pulldown_en(ACCEL_INT_PIN);
-    esp_sleep_enable_ext0_wakeup(ACCEL_INT_PIN, 1);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON); // keeps the pull-down active
+    esp_sleep_enable_ext1_wakeup(1ULL << ACCEL_INT_PIN, ESP_EXT1_WAKEUP_ANY_HIGH);
   }
-#if WAKE_ON_BUTTON
-  esp_sleep_enable_ext1_wakeup(1ULL << USER_BUTTON_PIN, ESP_EXT1_WAKEUP_ALL_LOW);
+#if WAKE_ON_VBUS
+  if (power::irqPending()) {
+    // Would wake us immediately and keep us awake: better to lose this wake-up source.
+    Serial.println(F("PMU interrupt line stuck low, USB power wake-up disabled"));
+  } else {
+    esp_sleep_enable_ext0_wakeup(PMU_IRQ_PIN, 0);
+  }
+#elif WAKE_ON_BUTTON
+  esp_sleep_enable_ext0_wakeup(USER_BUTTON_PIN, 0);
 #endif
   esp_sleep_enable_timer_wakeup((uint64_t)HEARTBEAT_S * 1000000ULL);
 
-  Serial.printf("Deep sleep for up to %u s\n", HEARTBEAT_S);
+  Serial.printf("Deep sleep for up to %lu s\n", (unsigned long)HEARTBEAT_S);
   Serial.flush();
   esp_deep_sleep_start();
 }
@@ -343,7 +365,7 @@ void onEvent(ev_t ev)
       power::led(true);
       break;
     case EV_JOINED:
-      Serial.printf("EV_JOINED, devaddr=0x%08X\n", LMIC.devaddr);
+      Serial.printf("EV_JOINED, devaddr=0x%08lX\n", (unsigned long)LMIC.devaddr);
       power::led(false);
       LMIC_setLinkCheckMode(0);
       LMIC_setAdrMode(0);
@@ -382,10 +404,21 @@ void setup()
   esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
   bool fromDeepSleep = esp_reset_reason() == ESP_RST_DEEPSLEEP;
 
-  if (!accel.begin(!fromDeepSleep)) Serial.println(F("No accelerometer found: motion wake-up disabled, using GPS only"));
+  if (USE_ACCEL && !accel.begin(!fromDeepSleep)) {
+    Serial.println(F("No accelerometer found: motion wake-up disabled, using GPS only"));
+  }
   if (USE_BME280 && !climate::begin()) Serial.println(F("USE_BME280 is on but no BME280 found"));
-  Serial.printf("\nMotionTracker boot #%u, PMU %s, accel %s, wake cause %d\n",
-                rtcBootCount, power::pmuName(), accel.name(), cause);
+  // Which pin woke us: ext1 = accelerometer, ext0 = PMU (USB power / PWR button) or middle button.
+  bool wokeByButton = cause == ESP_SLEEP_WAKEUP_EXT0 && (!WAKE_ON_VBUS || power::wokeByButton());
+  const char* wakeReason = !fromDeepSleep ? "power-up"
+                         : cause == ESP_SLEEP_WAKEUP_TIMER ? "heartbeat"
+                         : cause == ESP_SLEEP_WAKEUP_EXT1 ? "motion"
+                         : wokeByButton ? "button"
+                         : cause == ESP_SLEEP_WAKEUP_EXT0 ? "USB power"
+                         : "other";
+  Serial.printf("\nMotionTracker boot #%lu, PMU %s, accel %s, USB power %s, woken by %s\n",
+                (unsigned long)rtcBootCount, power::pmuName(), accel.name(),
+                power::vbusPresent() ? "yes" : "no", wakeReason);
 
   gpsPowered = true; // power::begin() switched the GPS rail on
   gps.init();
@@ -394,8 +427,8 @@ void setup()
     setGps(HEARTBEAT_REFRESH_GPS || !rtcHaveFix || !accel.present());
     enterState(STATE_PARKED);
   } else {
-    // Power-up, motion or button: start tracking.
-    forceReport = !fromDeepSleep || cause == ESP_SLEEP_WAKEUP_EXT1;
+    // Power-up, motion, USB power or button: start tracking.
+    forceReport = !fromDeepSleep || wokeByButton;
     enterState(STATE_MOVING);
   }
 

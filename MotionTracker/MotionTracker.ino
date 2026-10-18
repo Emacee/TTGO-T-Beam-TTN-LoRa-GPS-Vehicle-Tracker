@@ -23,7 +23,7 @@
  *   ch 2/3/4 temperature, humidity, pressure (only with USE_BME280)
  *
  * Requires the MCCI LoRaWAN LMIC library with the right region selected
- * (see README), TinyGPSPlus, CayenneLPP and XPowersLib.
+ * (see README.md in the repository root), TinyGPSPlus, CayenneLPP and XPowersLib.
  *******************************************************************************/
 
 #include <lmic.h>

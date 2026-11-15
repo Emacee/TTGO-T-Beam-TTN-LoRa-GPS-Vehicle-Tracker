@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/logo.svg" width="128" height="128" alt="MotionTracker logo: a location pin sending radio waves, with motion lines">
+</p>
+
 # TTGO T-Beam TTN LoRa GPS Vehicle Tracker
 
 A GPS vehicle tracker for the **[TTGO T-Beam](https://github.com/LilyGO/TTGO-T-Beam)** (ESP32 + GPS + LoRa) that reports
